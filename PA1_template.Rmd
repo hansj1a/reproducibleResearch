@@ -1,0 +1,122 @@
+---
+title: "PAI_template.Rmd"
+author: "hansj1a"
+date: "Friday, February 27, 2015"
+output: html_document
+---
+
+# Reproducible Research: Peer Assessment 1
+
+## Initialization and read in data
+
+
+First the necessary data has to be read and converted into the right format. 
+
+```{r}
+download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip","repdata_data_activity.zip")
+file<-unzip("repdata_data_activity.zip")
+options(max.print=99999999)
+activity<-read.csv(file)
+str(activity)
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+```
+
+## Histogram of the total number of steps taken per day
+
+In a second step the total number of steps taken per day is calculated and a histogram of the data is created
+
+```{r}
+totalSteps<-aggregate(steps ~ date, data = activity, sum, na.rm = TRUE)
+hist(totalSteps$steps,main="Total number of steps per day",xlab="total number of steps", ylab="Frequency of total number of steps",col="green")
+```
+
+## Mean and the median of the total number of steps taken per day
+
+In a third step mean and the median of the total number of steps taken per day are calculated
+
+```{r}
+meanSteps<-mean(totalSteps$steps)
+medianSteps<-median(totalSteps$steps)
+paste("The mean of the total number of steps taken per day is:",meanSteps)
+paste("The median of the total number of steps taken per day is:",medianSteps)
+```
+
+## Average daily activity pattern
+
+In a 4th step a time series plot of the 5-minute interval and the average number of steps taken is made.
+
+```{r}
+timeSeries <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
+plot(row.names(timeSeries), timeSeries, type = "l", xlab = "5-min interval", 
+    ylab = "average across all days", main = "Average daily activity pattern",col = "green")
+```
+
+Now the 5-minute interval is determined which contain the maximum number of steps.
+
+```{r}
+which.max(timeSeries)
+```
+
+The 1. value characterizes the maximum interval and the 2. value identifies at which position in the array "timeSeries" this interval occurs
+
+## Imputing missing values
+
+Calculation of the total number of missing values in the dataset 
+
+```{r}
+sumNAs<-sum(is.na(activity))
+paste("The total number of NAs are:",sumNAs)
+```
+
+Now, filling in all of the missing values in the dataset and create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+newActivity<-activity
+averageSteps<-aggregate(steps ~ interval, data = activity, mean)
+for (i in 1:nrow(activity))
+        if (is.na(activity[i,]$steps)){
+                inthelp<-activity[i,]$interval
+                newActivity[i,]$steps<-subset(averageSteps,interval==inthelp)$steps
+        }
+```
+
+## Histogram of the total number of steps taken per day (with missing values filled in)
+
+Again, the total number of steps taken per day is calculated and a histogram of the data is created
+
+```{r}
+totalSteps2<-aggregate(steps ~ date, data = newActivity, sum, na.rm = TRUE)
+hist(totalSteps2$steps,main="Total number of steps per day",xlab="total number of steps", ylab="Frequency of total number of steps",col="red")
+```
+
+## Mean and the median of the total number of steps taken per day (with missing values filled in)
+
+Again, mean and median of the total number of steps taken per day are calculated (this time with missing values filled in)
+
+```{r}
+meanSteps2<-mean(totalSteps2$steps)
+medianSteps2<-median(totalSteps2$steps)
+paste("The mean of the total number of steps taken per day is:",meanSteps2)
+paste("The median of the total number of steps taken per day is:",medianSteps2)
+paste("The difference between the mean of the total steps taken per day with NA and without NA is:",meanSteps-meanSteps2)
+paste("The difference between the median of the total steps taken per day with NA and without NA is:",medianSteps-medianSteps2)
+```
+
+## Analysis if there are differences between weekdays and weekends
+
+```{r}
+newActivity$day<-weekdays(as.Date(newActivity$date))
+newActivity$daytype<-""
+for (i in 1:nrow(newActivity)){
+        if (newActivity[i,]$day=="Samstag"||newActivity[i,]$day=="Sonntag")
+             newActivity[i,]$daytype="weekend"
+        else newActivity[i,]$daytype="weekday"
+        }
+timeSeries2 <- tapply(newActivity[newActivity$daytype=="weekday",]$steps, newActivity[newActivity$daytype=="weekday",]$interval, mean)
+timeSeries3 <- tapply(newActivity[newActivity$daytype=="weekend",]$steps, newActivity[newActivity$daytype=="weekend",]$interval, mean)
+plot(row.names(timeSeries2), timeSeries2, type = "l", xlab = "5-min interval", 
+ylab = "average across all days", main = "Average daily activity pattern on weekdays",col = "red")
+plot(row.names(timeSeries3), timeSeries3, type = "l", xlab = "5-min interval", 
+ylab = "average across all days", main = "Average daily activity pattern on weekends",col = "blue")
+```
+
